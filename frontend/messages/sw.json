@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Panga Safari Yako",
+    "subtitle": "Panga safari yako kamili kwa mikakati ya kufikiria kwa njia ya AI",
+    "search": "Wapi unakwenda kusafiri?",
+    "searchPlaceholder": "Mfano: Safari ya chakula ya siku 5 Dar es Salaam na hoteli na ndege"
+  },
+  "dashboard": {
+    "flights": "Ndege",
+    "hotels": "Hoteli",
+    "cars": "Magari na Usafiri",
+    "activities": "Shughuli",
+    "confidenceScore": "Alama ya Kujiamini"
+  },
+  "booking": {
+    "checkoutTitle": "Tathmini Safari Yako",
+    "total": "Jumla ya Bei",
+    "stampDuty": "Kodi",
+    "vat": "KDV (7.5%)",
+    "confirmBooking": "Thibitisha Urekebishaji"
+  }
+}

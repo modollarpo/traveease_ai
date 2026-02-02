@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Plan Uw Reis",
+    "subtitle": "Plan uw perfecte reis met AI-gestuurde aanbevelingen",
+    "search": "Waar reist u naartoe?",
+    "searchPlaceholder": "Voorbeeld: 5-daagse culinaire tour in Amsterdam met hotel en vluchten"
+  },
+  "dashboard": {
+    "flights": "Vluchten",
+    "hotels": "Hotels",
+    "cars": "Auto's en Vervoer",
+    "activities": "Activiteiten",
+    "confidenceScore": "Betrouwbaarheidsscore"
+  },
+  "booking": {
+    "checkoutTitle": "Controleer Uw Reis",
+    "total": "Totale Prijs",
+    "stampDuty": "Belasting",
+    "vat": "BTW (7.5%)",
+    "confirmBooking": "Boeking Bevestigen"
+  }
+}

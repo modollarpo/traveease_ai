@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Planeje Sua Viagem",
+    "subtitle": "Planeje sua viagem perfeita com recomendações alimentadas por IA",
+    "search": "Para onde você viaja?",
+    "searchPlaceholder": "Exemplo: Tour gastronômico de 5 dias em Lisboa com hotel e voos"
+  },
+  "dashboard": {
+    "flights": "Voos",
+    "hotels": "Hotéis",
+    "cars": "Carros e Transporte",
+    "activities": "Atividades",
+    "confidenceScore": "Pontuação de Confiança"
+  },
+  "booking": {
+    "checkoutTitle": "Revise Sua Viagem",
+    "total": "Preço Total",
+    "stampDuty": "Imposto",
+    "vat": "IVA (7.5%)",
+    "confirmBooking": "Confirmar Reserva"
+  }
+}

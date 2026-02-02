@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Start Your Waka",
+    "subtitle": "Plan your perfect trip with AI-powered recommendations",
+    "search": "Where are you traveling to?",
+    "searchPlaceholder": "e.g., 5-day food tour in Lagos with hotel and flights"
+  },
+  "dashboard": {
+    "flights": "Flights",
+    "hotels": "Hotels",
+    "cars": "Cars & Transport",
+    "activities": "Activities",
+    "confidenceScore": "Confidence Score"
+  },
+  "booking": {
+    "checkoutTitle": "Review Your Trip",
+    "total": "Total Price",
+    "stampDuty": "CBN Stamp Duty",
+    "vat": "VAT (7.5%)",
+    "confirmBooking": "Confirm Booking"
+  }
+}

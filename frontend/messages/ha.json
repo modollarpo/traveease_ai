@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Tsara Tafiya Naka",
+    "subtitle": "Tsara tafiya mafi kyau tare da shawarwarin da aka ba da sosai ta AI",
+    "search": "Ina kaka tafiya?",
+    "searchPlaceholder": "Almaari: Tafiya abinci 5-kwanaki a Kano da gida da jiragen sama"
+  },
+  "dashboard": {
+    "flights": "Jiragen Sama",
+    "hotels": "Gidaje",
+    "cars": "Motocin da Jirage",
+    "activities": "Aiki-aiki",
+    "confidenceScore": "Hakika Score"
+  },
+  "booking": {
+    "checkoutTitle": "Duba Tafiyarka",
+    "total": "Jimlar Farashi",
+    "stampDuty": "Haraji",
+    "vat": "VAT (7.5%)",
+    "confirmBooking": "Karbar Tafiya"
+  }
+}

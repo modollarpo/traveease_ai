@@ -1,0 +1,186 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: traveease-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: traveease_root_2026
+      MYSQL_DATABASE: traveease_commerce
+      MYSQL_USER: traveease_user
+      MYSQL_PASSWORD: traveease_pass_secure
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./commerce/prisma/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - traveease-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    restart: unless-stopped
+
+  # FastAPI Backend (Python - Agentic Engine + Booking Services)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: traveease-backend
+    environment:
+      # Amadeus
+      AMADEUS_API_KEY: ${AMADEUS_API_KEY:-K7XmZ2aBcDeFgHiJkLmNoPqRsTuVwXyZ}
+      AMADEUS_API_SECRET: ${AMADEUS_API_SECRET:-AmadeusTestSecretKey2026}
+      # Travel APIs
+      VIATOR_API_KEY: ${VIATOR_API_KEY:-VIA_TEST_123456789ABCDEF}
+      TREEPZ_API_KEY: ${TREEPZ_API_KEY:-TREEPZ_TEST_KEY_ABC123}
+      TRAVU_API_KEY: ${TRAVU_API_KEY:-TRAVU_TEST_KEY_XYZ789}
+      # Payment Gateways
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_REDACTED}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-ASc_CLIENT_TEST_ID_1234567890}
+      FLUTTERWAVE_SECRET_KEY: ${FLUTTERWAVE_SECRET_KEY:-FLWSECK_REDACTED}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-sk_REDACTED}
+      # Logging
+      LOG_LEVEL: INFO
+      NDPR_ENCRYPTION_KEY: ${NDPR_ENCRYPTION_KEY:-your-256-bit-key-here}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - backend_logs:/app/logs
+    networks:
+      - traveease-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    restart: unless-stopped
+
+  # NestJS Commerce (Node.js - Payment Orchestration)
+  commerce:
+    build:
+      context: ./commerce
+      dockerfile: Dockerfile
+    container_name: traveease-commerce
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: mysql://traveease_user:traveease_pass_secure@mysql:3306/traveease_commerce
+      # Payment Gateways
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_REDACTED}
+      PAYPAL_CLIENT_ID: ${PAYPAL_CLIENT_ID:-ASc_CLIENT_TEST_ID_1234567890}
+      FLUTTERWAVE_SECRET_KEY: ${FLUTTERWAVE_SECRET_KEY:-FLWSECK_REDACTED}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:-sk_REDACTED}
+      # Logging
+      LOG_LEVEL: info
+      NDPR_ENCRYPTION_KEY: ${NDPR_ENCRYPTION_KEY:-your-256-bit-key-here}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./commerce:/app
+      - commerce_logs:/app/logs
+    networks:
+      - traveease-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    restart: unless-stopped
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: traveease-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_AGENTIC_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    networks:
+      - traveease-network
+    depends_on:
+      - backend
+      - commerce
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    restart: unless-stopped
+
+  # Prometheus Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: traveease-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - traveease-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+
+  # Grafana Dashboard
+  grafana:
+    image: grafana/grafana:latest
+    container_name: traveease-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3002:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana-dashboards:/etc/grafana/provisioning/dashboards
+    networks:
+      - traveease-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Redis Cache (optional, for session management)
+  redis:
+    image: redis:7-alpine
+    container_name: traveease-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - traveease-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  backend_logs:
+  commerce_logs:
+  prometheus_data:
+  grafana_data:
+  redis_data:
+
+networks:
+  traveease-network:
+    driver: bridge

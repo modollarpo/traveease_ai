@@ -1,0 +1,227 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traveease-backend
+  namespace: production
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traveease-commerce
+  namespace: production
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traveease-frontend
+  namespace: production
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: traveease-role
+  namespace: production
+rules:
+- apiGroups: [""]
+  resources: ["secrets", "configmaps"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: traveease-backend-role-binding
+  namespace: production
+subjects:
+- kind: ServiceAccount
+  name: traveease-backend
+  namespace: production
+roleRef:
+  kind: Role
+  name: traveease-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: traveease-commerce-role-binding
+  namespace: production
+subjects:
+- kind: ServiceAccount
+  name: traveease-commerce
+  namespace: production
+roleRef:
+  kind: Role
+  name: traveease-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: traveease-frontend-role-binding
+  namespace: production
+subjects:
+- kind: ServiceAccount
+  name: traveease-frontend
+  namespace: production
+roleRef:
+  kind: Role
+  name: traveease-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: application-config
+  namespace: production
+data:
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  TIMEZONE: "UTC"
+  ENABLE_METRICS: "true"
+  METRICS_PORT: "9090"
+  CACHE_TTL: "3600"
+  SESSION_TIMEOUT: "1800"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: production
+data:
+  nginx-config: |
+    upstream backend {
+      server backend:8000;
+    }
+    upstream commerce {
+      server commerce:3001;
+    }
+    upstream frontend {
+      server frontend:3000;
+    }
+    
+    server {
+      listen 80;
+      server_name api.traveease.com;
+      
+      location / {
+        proxy_pass http://backend;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $host;
+      }
+    }
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: database-credentials
+  namespace: production
+type: Opaque
+stringData:
+  url: "mysql://user:password@host:3306/database"
+  host: "mysql-server.database.windows.net"
+  port: "3306"
+  username: "sqladmin"
+  password: "CHANGE_ME"
+  database: "traveease_production"
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-credentials
+  namespace: production
+type: Opaque
+stringData:
+  url: "redis://redis-cache.redis.windows.net:6380"
+  host: "redis-cache.redis.windows.net"
+  port: "6380"
+  password: "CHANGE_ME"
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-keys
+  namespace: production
+type: Opaque
+stringData:
+  jwt-secret: "CHANGE_ME_JWT_SECRET_KEY"
+  amadeus-key: "CHANGE_ME_AMADEUS_API_KEY"
+  stripe-key: "CHANGE_ME_STRIPE_API_KEY"
+  stripe-secret-key: "CHANGE_ME_STRIPE_SECRET_KEY"
+  stripe-connect-key: "CHANGE_ME_STRIPE_CONNECT_KEY"
+  paypal-key: "CHANGE_ME_PAYPAL_API_KEY"
+  paypal-client-id: "CHANGE_ME_PAYPAL_CLIENT_ID"
+  paypal-secret: "CHANGE_ME_PAYPAL_SECRET"
+  flutterwave-key: "CHANGE_ME_FLUTTERWAVE_API_KEY"
+  flutterwave-secret: "CHANGE_ME_FLUTTERWAVE_SECRET_KEY"
+  paystack-key: "CHANGE_ME_PAYSTACK_API_KEY"
+  paystack-secret: "CHANGE_ME_PAYSTACK_SECRET_KEY"
+
+---
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: acr-credentials
+  namespace: production
+type: kubernetes.io/dockercfg
+data:
+  .dockercfg: eyJhdXRocyI6e319  # Base64 encoded Docker config
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: application-logs
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: default
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: application-cache
+  namespace: production
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: default

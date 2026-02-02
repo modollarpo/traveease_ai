@@ -1,0 +1,177 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'commerce/**'
+      - 'frontend/**'
+      - '.github/workflows/aws-deploy.yml'
+
+env:
+  AWS_REGION: us-east-1
+  REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-image: ${{ steps.image-backend.outputs.image }}
+      commerce-image: ${{ steps.image-commerce.outputs.image }}
+      frontend-image: ${{ steps.image-frontend.outputs.image }}
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to ECR
+      uses: aws-actions/amazon-ecr-login@v1
+      id: login-ecr
+    
+    - name: Build, tag, and push backend image
+      id: image-backend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: traveease-backend
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Build, tag, and push commerce image
+      id: image-commerce
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: traveease-commerce
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./commerce
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Build, tag, and push frontend image
+      id: image-frontend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: traveease-frontend
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./frontend
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Update Backend ECS Task Definition
+      id: task-def-backend
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: infrastructure/aws/task-definitions/backend-task-def.json
+        container-name: backend
+        image: ${{ needs.build-and-push.outputs.backend-image }}
+        environment-variables: |
+          LOG_LEVEL=INFO
+          NDPR_ENCRYPTION_KEY=${{ secrets.NDPR_ENCRYPTION_KEY }}
+    
+    - name: Update Commerce ECS Task Definition
+      id: task-def-commerce
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: infrastructure/aws/task-definitions/commerce-task-def.json
+        container-name: commerce
+        image: ${{ needs.build-and-push.outputs.commerce-image }}
+        environment-variables: |
+          NODE_ENV=production
+          LOG_LEVEL=info
+    
+    - name: Update Frontend ECS Task Definition
+      id: task-def-frontend
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: infrastructure/aws/task-definitions/frontend-task-def.json
+        container-name: frontend
+        image: ${{ needs.build-and-push.outputs.frontend-image }}
+    
+    - name: Deploy Backend to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def-backend.outputs.task-definition }}
+        service: backend-service
+        cluster: production-traveease-cluster
+        wait-for-service-stability: true
+    
+    - name: Deploy Commerce to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def-commerce.outputs.task-definition }}
+        service: commerce-service
+        cluster: production-traveease-cluster
+        wait-for-service-stability: true
+    
+    - name: Deploy Frontend to ECS
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def-frontend.outputs.task-definition }}
+        service: frontend-service
+        cluster: production-traveease-cluster
+        wait-for-service-stability: true
+    
+    - name: Run Database Migrations
+      run: |
+        # Run migrations in commerce service
+        aws ecs execute-command \
+          --cluster production-traveease-cluster \
+          --task $(aws ecs list-tasks --cluster production-traveease-cluster --service-name commerce-service --query 'taskArns[0]' --output text | cut -d'/' -f3) \
+          --container commerce \
+          --interactive \
+          --command "npx prisma migrate deploy"
+    
+    - name: Post Deployment Health Check
+      run: |
+        # Wait for services to stabilize
+        echo "Waiting for services to stabilize..."
+        sleep 30
+        
+        # Check ALB health
+        ALB_DNS=$(aws elbv2 describe-load-balancers \
+          --query 'LoadBalancers[?LoadBalancerName==`production-traveease-alb`].DNSName' \
+          --output text)
+        
+        echo "Testing ALB health at: $ALB_DNS"
+        curl -f https://$ALB_DNS/health || echo "Health check failed"
+    
+    - name: Slack Notification
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: "Deployment to AWS ${{ job.status }}"
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit

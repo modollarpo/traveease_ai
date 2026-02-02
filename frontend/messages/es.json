@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Planifica Tu Viaje",
+    "subtitle": "Planifica tu viaje perfecto con recomendaciones impulsadas por IA",
+    "search": "¿A dónde viajas?",
+    "searchPlaceholder": "Ej.: Tour de 5 días en Madrid con hotel y vuelos"
+  },
+  "dashboard": {
+    "flights": "Vuelos",
+    "hotels": "Hoteles",
+    "cars": "Coches y Transporte",
+    "activities": "Actividades",
+    "confidenceScore": "Puntuación de Confianza"
+  },
+  "booking": {
+    "checkoutTitle": "Revisa Tu Viaje",
+    "total": "Precio Total",
+    "stampDuty": "Impuesto",
+    "vat": "IVA (7.5%)",
+    "confirmBooking": "Confirmar Reserva"
+  }
+}

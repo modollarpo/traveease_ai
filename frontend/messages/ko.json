@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "여행 계획",
+    "subtitle": "AI 기반 추천으로 완벽한 여행을 계획하세요",
+    "search": "어디로 여행하시나요?",
+    "searchPlaceholder": "예: 서울 5일 음식 투어 (호텔 및 항공편 포함)"
+  },
+  "dashboard": {
+    "flights": "항공편",
+    "hotels": "호텔",
+    "cars": "렌터카 및 운송",
+    "activities": "활동",
+    "confidenceScore": "신뢰 점수"
+  },
+  "booking": {
+    "checkoutTitle": "여행 검토",
+    "total": "총 가격",
+    "stampDuty": "세금",
+    "vat": "부가세 (7.5%)",
+    "confirmBooking": "예약 확인"
+  }
+}

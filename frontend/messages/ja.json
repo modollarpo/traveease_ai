@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "旅行を計画する",
+    "subtitle": "AI搭載のレコメンデーションで完璧な旅行を計画してください",
+    "search": "どこへ旅行しますか？",
+    "searchPlaceholder": "例：東京での5日間の食べ歩きツアー（ホテルとフライト付き）"
+  },
+  "dashboard": {
+    "flights": "フライト",
+    "hotels": "ホテル",
+    "cars": "レンタカーと交通",
+    "activities": "アクティビティ",
+    "confidenceScore": "信頼度スコア"
+  },
+  "booking": {
+    "checkoutTitle": "旅行を確認する",
+    "total": "総額",
+    "stampDuty": "税金",
+    "vat": "消費税 (7.5%)",
+    "confirmBooking": "予約を確認"
+  }
+}

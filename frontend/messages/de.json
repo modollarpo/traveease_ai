@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Planen Sie Ihre Reise",
+    "subtitle": "Planen Sie Ihre perfekte Reise mit KI-gestützten Empfehlungen",
+    "search": "Wohin reisen Sie?",
+    "searchPlaceholder": "Beispiel: 5-tägige Kulinarische Tour in Berlin mit Hotel und Flügen"
+  },
+  "dashboard": {
+    "flights": "Flüge",
+    "hotels": "Hotels",
+    "cars": "Autos und Transport",
+    "activities": "Aktivitäten",
+    "confidenceScore": "Zuverlässigkeitswert"
+  },
+  "booking": {
+    "checkoutTitle": "Überprüfen Sie Ihre Reise",
+    "total": "Gesamtpreis",
+    "stampDuty": "Steuer",
+    "vat": "MwSt. (7.5%)",
+    "confirmBooking": "Buchung Bestätigen"
+  }
+}

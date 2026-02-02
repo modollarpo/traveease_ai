@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Pianifica il Tuo Viaggio",
+    "subtitle": "Pianifica il tuo viaggio perfetto con consigli alimentati da IA",
+    "search": "Dove stai viaggiando?",
+    "searchPlaceholder": "Esempio: Tour gastronomico di 5 giorni a Roma con hotel e voli"
+  },
+  "dashboard": {
+    "flights": "Voli",
+    "hotels": "Hotel",
+    "cars": "Auto e Trasporti",
+    "activities": "Attività",
+    "confidenceScore": "Punteggio di Fiducia"
+  },
+  "booking": {
+    "checkoutTitle": "Rivedi il Tuo Viaggio",
+    "total": "Prezzo Totale",
+    "stampDuty": "Tassa",
+    "vat": "IVA (7.5%)",
+    "confirmBooking": "Conferma Prenotazione"
+  }
+}

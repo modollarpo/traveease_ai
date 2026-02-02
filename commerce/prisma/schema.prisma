@@ -1,0 +1,53 @@
+// Prisma schema for ledger-grade transactions
+// Save as prisma/schema.prisma in commerce directory
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Transaction {
+  id                String   @id @default(uuid())
+  amount            BigInt
+  currency          String   @db.Char(3)
+  baseCurrency      String   @db.Char(3)
+  midMarketRate     Decimal  @db.Decimal(18,8)
+  vendorId          String
+  userId            String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  type              String
+  status            String
+  splitPayments     SplitPayment[]
+}
+
+model SplitPayment {
+  id            String   @id @default(uuid())
+  transactionId String
+  vendorId      String
+  amount        BigInt
+  currency      String   @db.Char(3)
+  platformFee   BigInt
+  createdAt     DateTime @default(now())
+  Transaction   Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model ExchangeRate {
+  id            String   @id @default(uuid())
+  currency      String   @db.Char(3)
+  baseCurrency  String   @db.Char(3)
+  rate          Decimal  @db.Decimal(18,8)
+  timestamp     DateTime @default(now())
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  userId        String
+  action        String
+  maskedData    String
+  createdAt     DateTime @default(now())
+}

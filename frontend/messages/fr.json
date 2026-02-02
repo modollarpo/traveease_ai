@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Planifiez Votre Voyage",
+    "subtitle": "Planifiez votre voyage parfait avec des recommandations alimentées par l'IA",
+    "search": "Où voyagez-vous?",
+    "searchPlaceholder": "Exemple: Tour gastronomique de 5 jours à Paris avec hôtel et vols"
+  },
+  "dashboard": {
+    "flights": "Vols",
+    "hotels": "Hôtels",
+    "cars": "Voitures et Transport",
+    "activities": "Activités",
+    "confidenceScore": "Score de Confiance"
+  },
+  "booking": {
+    "checkoutTitle": "Revue de Votre Voyage",
+    "total": "Prix Total",
+    "stampDuty": "Taxe",
+    "vat": "TVA (7.5%)",
+    "confirmBooking": "Confirmer la Réservation"
+  }
+}

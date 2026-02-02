@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "规划您的旅行",
+    "subtitle": "使用人工智能驱动的建议规划您的完美旅行",
+    "search": "您要去哪里旅游？",
+    "searchPlaceholder": "示例：北京5天美食之旅，包括酒店和航班"
+  },
+  "dashboard": {
+    "flights": "航班",
+    "hotels": "酒店",
+    "cars": "汽车和运输",
+    "activities": "活动",
+    "confidenceScore": "信心指数"
+  },
+  "booking": {
+    "checkoutTitle": "查看您的旅行",
+    "total": "总价格",
+    "stampDuty": "税费",
+    "vat": "增值税 (7.5%)",
+    "confirmBooking": "确认预订"
+  }
+}

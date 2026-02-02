@@ -1,0 +1,111 @@
+groups:
+  - name: traveease_alerts
+    interval: 30s
+    rules:
+      # Backend availability
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 2m
+        annotations:
+          summary: "Traveease Backend is DOWN"
+          description: "Backend service at {{ $labels.instance }} is unreachable"
+          severity: "critical"
+
+      # High API latency
+      - alert: HighBackendLatency
+        expr: rate(http_request_duration_seconds_sum{job="backend"}[5m]) / rate(http_request_duration_seconds_count{job="backend"}[5m]) > 2
+        for: 5m
+        annotations:
+          summary: "High Backend Latency"
+          description: "Backend response time exceeds 2 seconds"
+          severity: "warning"
+
+      # Circuit breaker open
+      - alert: CircuitBreakerOpen
+        expr: circuit_breaker_state{state="open"} > 0
+        for: 1m
+        annotations:
+          summary: "Circuit Breaker OPEN"
+          description: "API circuit breaker for {{ $labels.api }} is OPEN"
+          severity: "warning"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)) / (sum(rate(http_requests_total[5m])) by (job)) > 0.05
+        for: 5m
+        annotations:
+          summary: "High Error Rate"
+          description: "Error rate for {{ $labels.job }} exceeds 5%"
+          severity: "warning"
+
+      # Commerce service down
+      - alert: CommerceDown
+        expr: up{job="commerce"} == 0
+        for: 2m
+        annotations:
+          summary: "Commerce Service is DOWN"
+          description: "Commerce service at {{ $labels.instance }} is unreachable"
+          severity: "critical"
+
+      # Payment processing delays
+      - alert: PaymentProcessingDelay
+        expr: histogram_quantile(0.95, rate(payment_processing_duration_seconds_bucket[5m])) > 10
+        for: 5m
+        annotations:
+          summary: "Payment Processing Delay"
+          description: "95th percentile payment processing time exceeds 10 seconds"
+          severity: "warning"
+
+      # Database connection pool exhausted
+      - alert: DBConnectionPoolExhausted
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        annotations:
+          summary: "Database Connection Pool Nearly Full"
+          description: "Database connection usage at {{ $value | humanizePercentage }}"
+          severity: "warning"
+
+      # Memory usage high
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        annotations:
+          summary: "High Memory Usage"
+          description: "Memory usage at {{ $value | humanizePercentage }}"
+          severity: "warning"
+
+      # Disk space low
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{fstype!~"tmpfs|fuse.lxcfs|squashfs|vfat"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        annotations:
+          summary: "Low Disk Space"
+          description: "Disk {{ $labels.device }} has less than 10% free space"
+          severity: "critical"
+
+      # NDPR compliance violations
+      - alert: NDPRComplianceViolation
+        expr: compliance_violations_total > 0
+        for: 1m
+        annotations:
+          summary: "NDPR Compliance Violation Detected"
+          description: "{{ $value }} compliance violations detected"
+          severity: "critical"
+
+      # Circuit breaker trip rate high
+      - alert: HighCircuitBreakerTripRate
+        expr: rate(circuit_breaker_trips_total[5m]) > 0.1
+        for: 5m
+        annotations:
+          summary: "High Circuit Breaker Trip Rate"
+          description: "Circuit breaker trips exceed 0.1/sec"
+          severity: "warning"
+
+      # Stranded transactions (orphaned bookings)
+      - alert: StrandedTransactions
+        expr: bookings_pending_payment_seconds{duration_minutes > 60} > 0
+        for: 30m
+        annotations:
+          summary: "Stranded Transactions Detected"
+          description: "{{ $value }} transactions stuck in pending state > 60 minutes"
+          severity: "warning"

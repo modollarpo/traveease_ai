@@ -1,0 +1,22 @@
+{
+  "home": {
+    "title": "Bere Waka Re",
+    "subtitle": "Planin trip mo perfect ni AI recommendations",
+    "search": "Fun lo ni o",
+    "searchPlaceholder": "Apẹẹrẹ: 5-day food tour ni Lagos, hotel ati flights"
+  },
+  "dashboard": {
+    "flights": "Awọ Ero",
+    "hotels": "Ile",
+    "cars": "Oke Oja & Lilọ",
+    "activities": "Ere",
+    "confidenceScore": "Imoye Afẹde"
+  },
+  "booking": {
+    "checkoutTitle": "Tẹtisi Trip Re",
+    "total": "Iye Lilo",
+    "stampDuty": "CBN Duty",
+    "vat": "VAT (7.5%)",
+    "confirmBooking": "Daabobo Booking"
+  }
+}

@@ -1,0 +1,160 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  REGISTRY_LOGIN_SERVER: ${{ secrets.AZURE_CONTAINER_REGISTRY_LOGIN_SERVER }}
+  REGISTRY_USERNAME: ${{ secrets.AZURE_CONTAINER_REGISTRY_USERNAME }}
+  REGISTRY_PASSWORD: ${{ secrets.AZURE_CONTAINER_REGISTRY_PASSWORD }}
+  RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+  AKS_CLUSTER_NAME: ${{ secrets.AZURE_AKS_CLUSTER_NAME }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Azure Container Registry
+        run: |
+          echo ${{ env.REGISTRY_PASSWORD }} | docker login -u ${{ env.REGISTRY_USERNAME }} --password-stdin ${{ env.REGISTRY_LOGIN_SERVER }}
+
+      - name: Build and push backend image
+        run: |
+          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:${{ github.sha }} ./backend
+          docker tag ${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:${{ github.sha }} ${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:latest
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:${{ github.sha }}
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:latest
+
+      - name: Build and push commerce image
+        run: |
+          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:${{ github.sha }} ./commerce
+          docker tag ${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:${{ github.sha }} ${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:latest
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:${{ github.sha }}
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:latest
+
+      - name: Build and push frontend image
+        run: |
+          docker build -t ${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:${{ github.sha }} ./frontend
+          docker tag ${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:${{ github.sha }} ${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:latest
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:${{ github.sha }}
+          docker push ${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:latest
+
+  deploy-to-aks:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Azure CLI defaults
+        run: |
+          az account set --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
+          az configure --defaults group=${{ env.RESOURCE_GROUP }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.AKS_CLUSTER_NAME }} --overwrite-existing
+
+      - name: Create namespaces if not exist
+        run: |
+          kubectl create namespace production --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Create container registry secret
+        run: |
+          kubectl create secret docker-registry acr-secret \
+            --docker-server=${{ env.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ env.REGISTRY_USERNAME }} \
+            --docker-password=${{ env.REGISTRY_PASSWORD }} \
+            --docker-email=admin@traveease.com \
+            --namespace production \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy backend service
+        run: |
+          kubectl set image deployment/backend backend=${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:${{ github.sha }} -n production || \
+          kubectl create deployment backend --image=${{ env.REGISTRY_LOGIN_SERVER }}/production-backend:${{ github.sha }} -n production
+
+      - name: Deploy commerce service
+        run: |
+          kubectl set image deployment/commerce commerce=${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:${{ github.sha }} -n production || \
+          kubectl create deployment commerce --image=${{ env.REGISTRY_LOGIN_SERVER }}/production-commerce:${{ github.sha }} -n production
+
+      - name: Deploy frontend service
+        run: |
+          kubectl set image deployment/frontend frontend=${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:${{ github.sha }} -n production || \
+          kubectl create deployment frontend --image=${{ env.REGISTRY_LOGIN_SERVER }}/production-frontend:${{ github.sha }} -n production
+
+      - name: Wait for deployments to be ready
+        run: |
+          kubectl rollout status deployment/backend -n production --timeout=5m
+          kubectl rollout status deployment/commerce -n production --timeout=5m
+          kubectl rollout status deployment/frontend -n production --timeout=5m
+
+      - name: Run database migrations
+        run: |
+          # Get a running commerce pod
+          POD=$(kubectl get pod -n production -l app=commerce -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "")
+          
+          if [ -n "$POD" ]; then
+            kubectl exec -it $POD -n production -- npx prisma migrate deploy || true
+          fi
+
+      - name: Verify health checks
+        run: |
+          # Give services time to start
+          sleep 30
+          
+          # Get the service IPs
+          BACKEND_IP=$(kubectl get svc backend -n production -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "localhost")
+          
+          # Check health endpoints
+          curl -f http://$BACKEND_IP:8000/health || echo "Backend health check failed (may still be starting up)"
+
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "✅ Traveease deployment to Azure successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*✅ Deployment Successful*\n*Environment:* Production (Azure)\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*Cluster:* ${{ env.AKS_CLUSTER_NAME }}"
+                  }
+                }
+              ]
+            }
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "❌ Traveease deployment to Azure failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*❌ Deployment Failed*\n*Environment:* Production (Azure)\n*Commit:* ${{ github.sha }}\n*Author:* ${{ github.actor }}\n*Cluster:* ${{ env.AKS_CLUSTER_NAME }}"
+                  }
+                }
+              ]
+            }
