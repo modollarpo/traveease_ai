@@ -24,7 +24,7 @@ import { VisaImmigrationService } from '../services/visa-immigration.service';
 import { TravelInsuranceService } from '../services/travel-insurance.service';
 import { CurrencyExchangeService } from '../services/currency-exchange.service';
 import { AIConciergeService } from '../services/ai-concierge.service';
-import { LoyaltyRewardsService } from '../services/loyalty-rewards.service';
+import { LoyaltyRewardsService, PointsSource } from '../services/loyalty-rewards.service';
 import { FlightBookingService } from '../services/flight-booking.service';
 import { CarRentalService } from '../services/car-rental.service';
 import { LocalMobilityService } from '../services/local-mobility.service';
@@ -85,12 +85,12 @@ export class BookingController {
     // Award loyalty points
     if (dto.userId) {
       const points = this.loyaltyService.calculateBookingPoints(
-        booking.pricing.total,
+        booking.price.total,
         'hotel',
       );
       await this.loyaltyService.awardPoints(
         dto.userId,
-        'booking' as any,
+        PointsSource.BOOKING,
         points,
         `Hotel booking: ${booking.hotel.name}`,
         booking.id,
@@ -101,9 +101,12 @@ export class BookingController {
   }
 
   @Delete('hotels/:bookingId')
-  async cancelHotel(@Param('bookingId') bookingId: string) {
+  async cancelHotel(
+    @Param('bookingId') bookingId: string,
+    @Query('confirmationNumber') confirmationNumber: string,
+  ) {
     this.logger.log(`Cancelling hotel booking: ${bookingId}`);
-    return await this.hotelService.cancelBooking(bookingId);
+    return await this.hotelService.cancelBooking(bookingId, confirmationNumber);
   }
 
   // ===========================
@@ -135,14 +138,14 @@ export class BookingController {
     // Award loyalty points
     if (dto.userId) {
       const points = this.loyaltyService.calculateBookingPoints(
-        booking.pricing.total,
+        booking.price.total,
         'tour',
       );
       await this.loyaltyService.awardPoints(
         dto.userId,
-        'booking' as any,
+        PointsSource.BOOKING,
         points,
-        `Tour booking: ${booking.tour.name}`,
+        `Tour booking: ${booking.tour.title}`,
         booking.id,
       );
     }
@@ -151,9 +154,12 @@ export class BookingController {
   }
 
   @Delete('tours/:bookingId')
-  async cancelTour(@Param('bookingId') bookingId: string) {
+  async cancelTour(
+    @Param('bookingId') bookingId: string,
+    @Query('confirmationNumber') confirmationNumber: string,
+  ) {
     this.logger.log(`Cancelling tour booking: ${bookingId}`);
-    return await this.toursService.cancelBooking(bookingId);
+    return await this.toursService.cancelBooking(bookingId, confirmationNumber);
   }
 
   // ===========================
@@ -488,12 +494,30 @@ export class BookingController {
   async unifiedSearch(@Body() dto: any) {
     this.logger.log(`Unified search: ${dto.location}`);
 
+    const checkInDate =
+      dto.checkInDate ||
+      dto.dates?.checkIn ||
+      new Date().toISOString().split('T')[0];
+    const checkOutDate =
+      dto.checkOutDate ||
+      dto.dates?.checkOut ||
+      new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const cityCode = dto.cityCode || dto.location || 'LON';
+    const adults = Number(dto.adults ?? dto.guests ?? 1);
+
     const results = await Promise.allSettled([
       this.hotelService.searchHotels({
-        location: dto.location,
-        checkIn: dto.dates?.checkIn,
-        checkOut: dto.dates?.checkOut,
-        guests: dto.guests,
+        cityCode,
+        checkInDate,
+        checkOutDate,
+        adults,
+        children: dto.children,
+        rooms: dto.rooms,
+        currency: dto.currency,
+        maxPrice: dto.maxPrice,
+        amenities: dto.amenities,
+        starRating: dto.starRating,
+        hotelChains: dto.hotelChains,
       }),
       this.toursService.searchTours({
         location: dto.location,
@@ -553,7 +577,13 @@ export class BookingController {
     // Award loyalty points
     if (dto.userId) {
       const pointsEarned = Math.floor(booking.totalPrice * 1.5); // 1.5 points per $1
-      await this.loyaltyService.awardPoints(dto.userId, pointsEarned, 'FLIGHT_BOOKING');
+      await this.loyaltyService.awardPoints(
+        dto.userId,
+        PointsSource.BOOKING,
+        pointsEarned,
+        'Flight booking',
+        booking.bookingId,
+      );
     }
 
     return booking;
@@ -640,7 +670,13 @@ export class BookingController {
     // Award loyalty points
     if (dto.userId) {
       const pointsEarned = Math.floor(rental.totalCost * 1.2);
-      await this.loyaltyService.awardPoints(dto.userId, pointsEarned, 'CAR_RENTAL');
+      await this.loyaltyService.awardPoints(
+        dto.userId,
+        PointsSource.BOOKING,
+        pointsEarned,
+        'Car rental',
+        rental.rentalId,
+      );
     }
 
     return rental;
@@ -781,7 +817,13 @@ export class BookingController {
     // Award loyalty points
     if (dto.userId) {
       const pointsEarned = Math.floor(booking.estimatedFare * 1.1);
-      await this.loyaltyService.awardPoints(dto.userId, pointsEarned, 'SHUTTLE_BOOKING');
+      await this.loyaltyService.awardPoints(
+        dto.userId,
+        PointsSource.BOOKING,
+        pointsEarned,
+        'Shuttle booking',
+        booking.bookingId,
+      );
     }
 
     return booking;

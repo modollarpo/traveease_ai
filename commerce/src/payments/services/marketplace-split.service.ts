@@ -145,7 +145,7 @@ export class MarketplaceSplitService {
           metadata: {
             vendorId: split.vendorId,
             type: split.type,
-            traveaseOrderId: split.vendorIds?.[0],
+            traveaseOrderId: split.vendorId,
           },
         });
 

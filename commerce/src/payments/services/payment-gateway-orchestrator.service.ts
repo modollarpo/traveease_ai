@@ -79,7 +79,7 @@ export class PaymentGatewayOrchestrator {
       const optimalGateway = this.selectOptimalGateway(
         geolocation,
         dto.currency,
-        dto.splits?.map((s) => s.vendorIds),
+        dto.splits?.map((s) => s.vendorId),
       );
 
       this.logger.debug(

@@ -8,6 +8,7 @@ build/
 .next/
 out/
 .vercel/
+*.tsbuildinfo
 
 # Logs
 logs/
@@ -90,4 +91,4 @@ temp/
 *.pid.lock
 
 # Misc
-package-lock.json
+traveease_ai.git/

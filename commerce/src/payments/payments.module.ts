@@ -26,4 +26,4 @@ import { PaymentController } from './controllers/payment.controller';
     MarketplaceSplitService,
   ],
 })
-export class PaymentModule {}
+export class PaymentsModule {}

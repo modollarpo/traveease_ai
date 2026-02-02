@@ -11,7 +11,7 @@ export class PaymentsController {
   constructor(
     private readonly orchestrator: PaymentGatewayOrchestrator,
     private readonly splitService: MarketplaceSplitService,
-    private readonly logisticsSaga: LogisticsSagaService,
+    private readonly logisticsSagaService: LogisticsSagaService,
     private readonly currencyService: CurrencyPrecisionService,
     private readonly nigerianCompliance: NigerianComplianceService,
     private readonly multiVendorCart: MultiVendorCartService,
@@ -31,13 +31,13 @@ export class PaymentsController {
   async logisticsSaga(@Body() body) {
     switch (body.action) {
       case 'holdInventory':
-        return this.logisticsSaga.holdInventory(body.ttl);
+        return this.logisticsSagaService.holdInventory(body.ttl);
       case 'lockPrice':
-        return this.logisticsSaga.lockPrice();
+        return this.logisticsSagaService.lockPrice();
       case 'captureAuth':
-        return this.logisticsSaga.captureAuth();
+        return this.logisticsSagaService.captureAuth();
       case 'ticket':
-        return this.logisticsSaga.ticket();
+        return this.logisticsSagaService.ticket();
       default:
         return { error: 'Invalid action' };
     }
