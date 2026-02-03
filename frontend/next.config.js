@@ -1,7 +1,8 @@
-import type { Config } from "next"
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+	typescript: {
+		ignoreBuildErrors: false,
+	},
+};
 
-const config: Config = {
-  plugins: [require("next-intl/plugin")("./i18n.ts")],
-}
-
-export default config
+module.exports = nextConfig;

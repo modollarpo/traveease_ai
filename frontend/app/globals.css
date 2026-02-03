@@ -3,28 +3,60 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.6%;
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.6%;
-  --primary: 14 100% 50%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 5.9% 10%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 45.9%;
-  --accent: 240 5.9% 10%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
-  --ring: 14 100% 50%;
-  --radius: 0.5rem;
+  /* Brand palette: deep navy + electric sky */
+  --background: 222 47% 5%;        /* page background */
+  --foreground: 210 40% 98%;       /* primary text */
+  --card: 222 47% 7%;
+  --card-foreground: 210 40% 98%;
+  --primary: 199 89% 55%;          /* electric sky */
+  --primary-foreground: 210 40% 98%;
+  --secondary: 222 47% 12%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 222 47% 10%;
+  --muted-foreground: 215 20% 72%;
+  --accent: 269 83% 68%;           /* violet accent */
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 215 25% 20%;
+  --input: 215 25% 20%;
+  --ring: 199 89% 55%;
+  --radius: 0.75rem;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  color: hsl(var(--foreground));
+  background: radial-gradient(circle at top, rgba(56, 189, 248, 0.15), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.25), transparent 55%),
+    hsl(var(--background));
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', 'Segoe UI', sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgba(56, 189, 248, 0.35);
+  color: hsl(var(--foreground));
+}
+
+/* Layout helpers */
+.app-shell {
+  @apply min-h-screen flex flex-col;
+}
+
+.app-main {
+  @apply flex-1 flex flex-col;
+}
+
+.app-container {
+  @apply max-w-7xl mx-auto px-6 md:px-8;
+}
+
+/* Glass panel used in hero search */
+.glass-panel {
+  @apply bg-slate-900/70 backdrop-blur-xl border border-slate-700/60 shadow-2xl shadow-sky-900/40;
 }

@@ -426,3 +426,103 @@ model BookingItinerary {
   @@index([status])
   @@index([startDate, endDate])
 }
+
+// =====================================================================
+// VENDOR MARKETPLACE (GLOBAL)
+// =====================================================================
+
+model Vendor {
+  id               String   @id @default(uuid())
+  name             String   @db.VarChar(255)
+  legalName        String?  @db.VarChar(255)
+  email            String   @db.VarChar(255)
+  phone            String?  @db.VarChar(20)
+  countryCode      String   @db.Char(2)
+  city             String?  @db.VarChar(255)
+  website          String?  @db.VarChar(255)
+
+  // Payout configuration (Stripe Connect, Flutterwave, Paystack, etc.)
+  stripeAccountId  String?  @db.VarChar(255)
+  flutterwaveSubId String?  @db.VarChar(255)
+  paystackSubId    String?  @db.VarChar(255)
+  payoutCurrency   String   @db.Char(3)
+
+  kycStatus        String   @default("PENDING") // PENDING / APPROVED / REJECTED
+  reliabilityScore Decimal  @default(0.0) @db.Decimal(5, 2)
+
+  offers           VendorOffer[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([countryCode])
+  @@index([kycStatus])
+}
+
+model VendorOffer {
+  id               String   @id @default(uuid())
+  vendorId         String
+  vendor           Vendor   @relation(fields: [vendorId], references: [id])
+
+  // Optional external identifier for idempotent CSV sync
+  externalId       String?  @db.VarChar(255)
+
+  title            String   @db.VarChar(500)
+  description      String   @db.LongText
+  category         String   @db.VarChar(100) // e.g. TOUR / TRANSFER / EXPERIENCE
+  countryCode      String   @db.Char(2)
+  city             String   @db.VarChar(255)
+
+  meetingPointLat  Decimal? @db.Decimal(10, 8)
+  meetingPointLng  Decimal? @db.Decimal(11, 8)
+
+  // Pricing in minor units (ledger-grade)
+  priceMinor       BigInt
+  currency         String   @db.Char(3)
+
+  language         String   @db.VarChar(10)
+  durationMinutes  Int?
+  capacity         Int?
+
+  availableFrom    DateTime?
+  availableTo      DateTime?
+  daysOfWeek       String?  @db.VarChar(50) // e.g. MON,TUE,WED
+
+  images           String?  @db.Text // semicolon-separated URLs
+
+  status           String   @default("DRAFT") // ACTIVE / DRAFT / INACTIVE
+
+  // Optional AI-enriched fields
+  aiTitle          String?  @db.VarChar(500)
+  aiDescription    String?  @db.LongText
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([countryCode, city])
+  @@index([status])
+  @@unique([vendorId, externalId])
+}
+
+model VendorOfferImportJob {
+  id             String   @id @default(uuid())
+  vendorId       String
+  vendor         Vendor   @relation(fields: [vendorId], references: [id])
+
+  fileName       String   @db.VarChar(255)
+  status         String   @default("PENDING") // PENDING / PROCESSING / COMPLETED / FAILED
+
+  totalRows      Int      @default(0)
+  createdCount   Int      @default(0)
+  updatedCount   Int      @default(0)
+  errorCount     Int      @default(0)
+
+  errorReportJson String? @db.LongText // JSON blob with per-row errors
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([vendorId])
+  @@index([status])
+}

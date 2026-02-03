@@ -5,6 +5,7 @@ import { HttpModule } from '@nestjs/axios';
 // Modules
 import { PaymentsModule } from './payments/payments.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { VendorModule } from './vendor/vendor.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { BookingsModule } from './bookings/bookings.module';
     // Feature modules
     PaymentsModule,
     BookingsModule,
+    VendorModule,
   ],
   controllers: [],
   providers: [],

@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentGatewayOrchestrator } from './services/payment-gateway-orchestrator.service';
 import { MarketplaceSplitService } from './services/marketplace-split.service';
+import { MarketplaceCheckoutService } from './services/marketplace-checkout.service';
 import { PaymentController } from './controllers/payment.controller';
 
 @Module({
@@ -20,10 +21,12 @@ import { PaymentController } from './controllers/payment.controller';
   providers: [
     PaymentGatewayOrchestrator,
     MarketplaceSplitService,
+    MarketplaceCheckoutService,
   ],
   exports: [
     PaymentGatewayOrchestrator,
     MarketplaceSplitService,
+    MarketplaceCheckoutService,
   ],
 })
 export class PaymentsModule {}

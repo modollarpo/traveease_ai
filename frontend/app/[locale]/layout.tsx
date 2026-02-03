@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import "../globals.css";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
 
 export const metadata: Metadata = {
   title: "Traveease - AI Travel Marketplace",
@@ -30,21 +32,31 @@ export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
 }
 
-export default function LocaleLayout({
+export default async function LocaleLayout({
   children,
   params,
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const isValidLocale = locales.includes(params.locale);
+  const { locale } = await params;
+
+  const isValidLocale = locales.includes(locale);
   if (!isValidLocale) {
     notFound();
   }
 
   return (
-    <html lang={params.locale}>
-      <body>{children}</body>
+    <html lang={locale}>
+      <body className="antialiased">
+        <div className="app-shell">
+          <SiteHeader />
+          <main className="app-main">
+            {children}
+          </main>
+          <SiteFooter />
+        </div>
+      </body>
     </html>
   );
 }

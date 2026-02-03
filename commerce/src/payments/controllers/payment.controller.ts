@@ -18,6 +18,11 @@ import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
 import { PaymentGatewayOrchestrator } from '../services/payment-gateway-orchestrator.service';
 import { MarketplaceSplitService } from '../services/marketplace-split.service';
 import {
+  MarketplaceCheckoutService,
+  MarketplaceCheckoutRequest,
+  MarketplaceCheckoutResponse,
+} from '../services/marketplace-checkout.service';
+import {
   CreatePaymentIntentDTO,
   PaymentIntentResponseDTO,
   PaymentWebhookDTO,
@@ -35,6 +40,7 @@ export class PaymentController {
   constructor(
     private paymentGatewayOrchestrator: PaymentGatewayOrchestrator,
     private marketplaceSplitService: MarketplaceSplitService,
+    private marketplaceCheckoutService: MarketplaceCheckoutService,
   ) {}
 
   /**
@@ -70,6 +76,38 @@ export class PaymentController {
     dto.ipAddress = ip;
 
     return this.paymentGatewayOrchestrator.createPaymentIntent(dto);
+  }
+
+  /**
+   * Marketplace checkout - single intent with multi-vendor splits
+   */
+  @Post('checkout/marketplace')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create Marketplace Checkout',
+    description:
+      'Creates a single payment intent for a multi-vendor cart and registers downstream split instructions.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Marketplace checkout created successfully',
+  })
+  async createMarketplaceCheckout(
+    @Body() body: MarketplaceCheckoutRequest,
+    @Headers('x-forwarded-for') clientIp?: string,
+  ): Promise<MarketplaceCheckoutResponse> {
+    this.logger.log(
+      `Marketplace checkout for user: ${body.userId} | items: ${body.items?.length ?? 0}`,
+    );
+
+    // In production, resolve IP to country via MaxMind and pass as ipCountry.
+    const ip = clientIp || '127.0.0.1';
+
+    return this.marketplaceCheckoutService.createMarketplaceCheckout({
+      ...body,
+      ipCountry: body.ipCountry ?? undefined,
+      userAgent: body.userAgent,
+    });
   }
 
   /**

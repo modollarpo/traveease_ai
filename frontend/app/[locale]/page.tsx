@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Tabs } from '@/components/ui/Tabs';
+import { AtriumHero } from '@/components/home/AtriumHero';
 
 export default function HomePage() {
-  const [searchType, setSearchType] = useState('flights');
 
   const destinations = [
     {
@@ -41,285 +39,164 @@ export default function HomePage() {
     },
   ];
 
-  const deals = [
-    { title: '50% Off Hotels in Europe', description: 'Book now for summer travel', badge: 'Hot Deal' },
-    { title: 'Free Car Rental Upgrade', description: 'On bookings over $500', badge: 'Limited Time' },
-    { title: 'Earn 2x Points', description: 'On all flight bookings', badge: 'Rewards' },
-  ];
-
-  const searchTabs = [
-    {
-      label: 'Flights',
-      value: 'flights',
-      icon: '✈️',
-      content: (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <Input placeholder="From (City or Airport)" />
-            <Input placeholder="To (City or Airport)" />
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            <Input type="date" placeholder="Departure" />
-            <Input type="date" placeholder="Return" />
-            <Input placeholder="Passengers" defaultValue="1 Adult" />
-          </div>
-          <Link href="/flights/results">
-            <Button variant="primary" size="lg" fullWidth>
-              Search Flights
-            </Button>
-          </Link>
-        </div>
-      ),
-    },
-    {
-      label: 'Hotels',
-      value: 'hotels',
-      icon: '🏨',
-      content: (
-        <div className="space-y-4">
-          <Input placeholder="Destination or Hotel Name" />
-          <div className="grid grid-cols-3 gap-4">
-            <Input type="date" placeholder="Check-in" />
-            <Input type="date" placeholder="Check-out" />
-            <Input placeholder="Guests" defaultValue="2 Adults" />
-          </div>
-          <Link href="/hotels/results">
-            <Button variant="primary" size="lg" fullWidth>
-              Search Hotels
-            </Button>
-          </Link>
-        </div>
-      ),
-    },
-    {
-      label: 'Cars',
-      value: 'cars',
-      icon: '🚗',
-      content: (
-        <div className="space-y-4">
-          <Input placeholder="Pick-up Location" />
-          <div className="grid grid-cols-2 gap-4">
-            <Input type="datetime-local" placeholder="Pick-up Date & Time" />
-            <Input type="datetime-local" placeholder="Drop-off Date & Time" />
-          </div>
-          <Link href="/cars/results">
-            <Button variant="primary" size="lg" fullWidth>
-              Search Cars
-            </Button>
-          </Link>
-        </div>
-      ),
-    },
-    {
-      label: 'Tours',
-      value: 'tours',
-      icon: '🎫',
-      content: (
-        <div className="space-y-4">
-          <Input placeholder="Destination" />
-          <Input type="date" placeholder="Travel Date" />
-          <Link href="/tours/results">
-            <Button variant="primary" size="lg" fullWidth>
-              Search Tours
-            </Button>
-          </Link>
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-white">
-      {/* Hero Section */}
-      <div className="relative h-[600px] bg-gradient-to-r from-sky-600 to-blue-700 overflow-hidden">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="relative z-10 max-w-7xl mx-auto px-6 h-full flex flex-col justify-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
-            Your Journey Begins Here
-          </h1>
-          <p className="text-xl text-white/90 mb-8 max-w-2xl">
-            Book flights, hotels, cars, and tours with AI-powered recommendations.
-            Travel smarter with Traveease.
-          </p>
+    <div className="app-container space-y-16">
+      <AtriumHero />
 
-          {/* Search Box */}
-          <Card variant="elevated" className="max-w-4xl">
-            <CardContent className="p-6">
-              <Tabs tabs={searchTabs} defaultValue="flights" />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Decorative Elements */}
-        <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 120" className="w-full h-auto">
-            <path
-              fill="#ffffff"
-              d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Popular Destinations */}
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
+      {/* Destinations & marketplace */}
+      <section className="grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] items-start">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900">Popular Destinations</h2>
-              <p className="text-gray-600 mt-2">Explore the world's most amazing places</p>
+              <h2 className="text-2xl md:text-3xl font-semibold text-foreground">Instant global inventory.</h2>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Curated routes from Amadeus, local DMCs, and on-ground partners.
+              </p>
             </div>
-            <Button variant="outline">View All</Button>
+            <Button variant="ghost" className="hidden sm:inline-flex text-xs">
+              View all destinations
+            </Button>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {destinations.map((dest) => (
-              <Card key={dest.name} variant="default" interactive className="overflow-hidden">
+              <Card
+                key={dest.name}
+                variant="default"
+                interactive
+                className="overflow-hidden bg-background/40 border-border/60"
+              >
                 <CardContent className="p-0">
-                  <img
-                    src={dest.image}
-                    alt={dest.name}
-                    className="w-full h-64 object-cover"
-                  />
-                  <div className="p-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{dest.name}</h3>
-                    <p className="text-sm text-gray-600 mb-3">{dest.country}</p>
-                    <p className="text-xs text-gray-500 mb-3">{dest.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sky-600 font-semibold">{dest.price}</span>
-                      <Button variant="primary" size="sm">
-                        Explore
-                      </Button>
+                  <div className="relative">
+                    <img
+                      src={dest.image}
+                      alt={dest.name}
+                      className="h-40 w-full object-cover opacity-90"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                    <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] text-white/80">
+                      <span className="font-medium">{dest.price}</span>
+                      <span className="rounded-full bg-black/40 px-2 py-0.5">
+                        {dest.country}
+                      </span>
                     </div>
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">{dest.name}</h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2">{dest.description}</p>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         </div>
-      </section>
 
-      {/* Deals Section */}
-      <section className="bg-gray-50 py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">Exclusive Deals</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {deals.map((deal, index) => (
-              <Card key={index} variant="elevated">
-                <CardContent className="p-6">
-                  <span className="inline-block px-3 py-1 bg-rose-100 text-rose-800 text-xs font-semibold rounded-full mb-3">
-                    {deal.badge}
-                  </span>
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">{deal.title}</h3>
-                  <p className="text-gray-600 mb-4">{deal.description}</p>
-                  <Button variant="primary" size="sm">
-                    Learn More
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us */}
-      <section className="py-16 px-6">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">
-            Why Choose Traveease?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🤖</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">AI-Powered Search</h3>
-              <p className="text-gray-600">
-                Smart recommendations based on your preferences and budget
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">💰</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Best Price Guarantee</h3>
-              <p className="text-gray-600">
-                Find the lowest prices or we'll refund the difference
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🌍</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Global Coverage</h3>
-              <p className="text-gray-600">
-                Access millions of options worldwide in 150+ countries
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-gradient-to-r from-sky-500 to-blue-600 py-16 px-6">
-        <div className="max-w-4xl mx-auto text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">Ready to Start Your Adventure?</h2>
-          <p className="text-xl mb-8 opacity-90">
-            Join millions of travelers and start booking your dream trip today
-          </p>
-          <div className="flex gap-4 justify-center">
-            <Link href="/signup">
-              <Button variant="primary" size="lg" className="bg-white text-sky-600 hover:bg-gray-100">
-                Sign Up Free
+        <Card variant="default" className="glass-panel border-border/60">
+          <CardContent className="p-5 space-y-4">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-primary">
+              Marketplace snapshot
+            </p>
+            <h3 className="text-lg font-semibold text-foreground">
+              One checkout, many vendors.
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Split a single payment across flights, hotels, tours, and cars in
+              one click. Traveease stays merchant-of-record while vendors get
+              paid out in their local currencies.
+            </p>
+            <ul className="space-y-2 text-xs text-muted-foreground">
+              <li>• Stripe Connect, PayPal, Flutterwave, Paystack orchestrated by region</li>
+              <li>• Support for BNPL (Klarna, Afterpay, PayPal Pay Later)</li>
+              <li>• Full bitemporal audit trail for every split and refund</li>
+            </ul>
+            <Link href="/marketplace">
+              <Button variant="outline" size="sm" className="border-primary/40 text-primary hover:bg-primary/10">
+                Explore marketplace API
               </Button>
             </Link>
-            <Link href="/flights">
-              <Button variant="outline" size="lg" className="border-white text-white hover:bg-sky-600">
-                Explore Destinations
-              </Button>
-            </Link>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-6">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
+      {/* Enterprise pillars */}
+      <section className="space-y-8">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h3 className="font-bold text-lg mb-4">Traveease</h3>
-            <p className="text-gray-400 text-sm">
-              Your AI-native travel operating system for seamless booking experiences.
+            <h2 className="text-2xl md:text-3xl font-semibold text-foreground">Built for enterprise-grade travel.</h2>
+            <p className="text-sm md:text-base text-muted-foreground">
+              From price locks to refunds, every step is modeled in a Saga.
             </p>
           </div>
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/about">About Us</Link></li>
-              <li><Link href="/careers">Careers</Link></li>
-              <li><Link href="/press">Press</Link></li>
-            </ul>
+          <p className="text-[11px] text-muted-foreground max-w-xs">
+            All flows enforce atomic inventory holds before capture, full
+            idempotency on webhooks, and replay-safe reconciliation.
+          </p>
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card variant="default" className="glass-panel border-border/60">
+            <CardContent className="space-y-3 p-5">
+              <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center text-lg">
+                🤖
+              </div>
+              <h3 className="text-base font-semibold text-foreground">Agentic concierge</h3>
+              <p className="text-sm text-muted-foreground">
+                LangGraph agents watch every trip, track price drops, and
+                propose rebooking paths that respect corporate rules.
+              </p>
+            </CardContent>
+          </Card>
+          <Card variant="default" className="glass-panel border-border/60">
+            <CardContent className="space-y-3 p-5">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center text-lg">
+                💸
+              </div>
+              <h3 className="text-base font-semibold text-foreground">Financial orchestration</h3>
+              <p className="text-sm text-muted-foreground">
+                BigInt ledgers, mid-market FX at auth time, and region-aware
+                routing through global and local gateways.
+              </p>
+            </CardContent>
+          </Card>
+          <Card variant="default" className="glass-panel border-border/60">
+            <CardContent className="space-y-3 p-5">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center text-lg">
+                🛡️
+              </div>
+              <h3 className="text-base font-semibold text-foreground">Compliance by design</h3>
+              <p className="text-sm text-muted-foreground">
+                GDPR/NDPR masking, PCI-friendly logs, and full audit views for
+                finance and risk teams.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* Call to action */}
+      <section className="glass-panel border-primary/40 bg-primary/10">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="space-y-2">
+            <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
+              Ready to launch your next market?
+            </h2>
+            <p className="text-sm md:text-base text-muted-foreground max-w-xl">
+              Spin up a branded travel experience with unified checkout,
+              localized payouts, and multilingual ledgers in weeks, not months.
+            </p>
           </div>
-          <div>
-            <h4 className="font-semibold mb-4">Support</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/help">Help Center</Link></li>
-              <li><Link href="/contact">Contact Us</Link></li>
-              <li><Link href="/faq">FAQ</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-gray-400">
-              <li><Link href="/terms">Terms of Service</Link></li>
-              <li><Link href="/privacy">Privacy Policy</Link></li>
-              <li><Link href="/cookies">Cookie Policy</Link></li>
-            </ul>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/signup">
+              <Button variant="primary" size="lg">
+                Create an account
+              </Button>
+            </Link>
+            <Link href="/docs">
+              <Button variant="outline" size="lg" className="border-primary/40 text-primary hover:bg-primary/10">
+                View developer docs
+              </Button>
+            </Link>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-8 pt-8 border-t border-gray-800 text-center text-sm text-gray-400">
-          <p>&copy; 2026 Traveease. All rights reserved.</p>
-        </div>
-      </footer>
+      </section>
     </div>
   );
 }
