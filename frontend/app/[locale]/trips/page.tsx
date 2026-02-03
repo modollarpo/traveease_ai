@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { puffyTap, fadeInUp, staggerContainer } from '@/lib/motion';
 import { ConciergeAgentWidget } from '@/components/trips/ConciergeAgentWidget';
+import { useState } from 'react';
 
 // Load Mapbox only in the browser.
 const MapboxMap = dynamic(() => import('@/components/trips/TripMap'), {
@@ -25,6 +26,36 @@ const sampleTrip = {
 };
 
 export default function MyTripsPage() {
+  const [visaStatus, setVisaStatus] = useState<string | null>(null);
+
+  const handleVisaCheck = async () => {
+    try {
+      setVisaStatus('Checking visa eligibility…');
+      const res = await fetch('/api/visas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'eligibility',
+          payload: {
+            citizenCountry: 'NG',
+            destinationCountry: 'KE',
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Visa check failed');
+      }
+      setVisaStatus(
+        data.eligible
+          ? `Eligible: ${data.visa_type} · est. ${data.processing_time_days} days`
+          : 'Visa may be required; additional checks needed.',
+      );
+    } catch (e: any) {
+      setVisaStatus(e?.message ?? 'Unable to check visas right now.');
+    }
+  };
+
   return (
     <div className="app-container py-8 pb-20 space-y-8">
       <header className="space-y-2">
@@ -128,6 +159,46 @@ export default function MyTripsPage() {
                   </motion.div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-soft border-white/10">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-ghost-white/60">
+                    Visa & compliance
+                  </p>
+                  <p className="text-sm font-semibold text-ghost-white">
+                    Keep passports, visas & NDPR in one flow.
+                  </p>
+                </div>
+              </div>
+              <p className="text-[11px] text-ghost-white/70">
+                For this Lagos → Nairobi safari, we pre-check if a Nigerian
+                passport holder needs a visa and estimate processing time
+                before you lock in flights.
+              </p>
+              <div className="flex items-center justify-between gap-3">
+                <motion.div {...puffyTap}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="gummy-button bg-neo-mint text-traveease-blue hover:bg-neo-mint/90"
+                    onClick={handleVisaCheck}
+                  >
+                    Check visa for this trip
+                  </Button>
+                </motion.div>
+                <p className="text-[10px] text-ghost-white/60">
+                  Powered by VisaService · NDPR-masked passport data.
+                </p>
+              </div>
+              {visaStatus && (
+                <p className="text-[11px] text-neo-mint">
+                  {visaStatus}
+                </p>
+              )}
             </CardContent>
           </Card>
         </motion.div>
