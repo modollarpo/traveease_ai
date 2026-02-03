@@ -378,6 +378,17 @@ resource keyVault 'Microsoft.KeyVault/vaults@2021-10-01' = {
   }
 }
 
+// Key Vault Secret: Enable GPT-5.1 for all clients
+resource gpt51FeatureFlag 'Microsoft.KeyVault/vaults/secrets@2021-10-01' = {
+  name: '${keyVault.name}/gpt-5-1-enabled'
+  properties: {
+    value: 'true'
+  }
+  dependsOn: [
+    keyVault
+  ]
+}
+
 // Log Analytics Workspace
 resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2021-12-01-preview' = {
   name: logAnalyticsName
