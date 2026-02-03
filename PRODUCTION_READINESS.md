@@ -65,12 +65,31 @@
   - Database URL constructed from env vars
   - Fallback values where safe (e.g., ports, log levels)
 
-### 4. **Azure Bicep Infrastructure**
-- [x] Added Key Vault secret `gpt-5-1-enabled=true` to Azure deployment
+### 4. **Database Migrations** ⚠️ AUDIT COMPLETED
+- [x] Audited existing migrations: 1 core migration (`20260201082543_init_global_ledger_schema`)
+  - Transaction table (BIGINT amounts, FX tracking)
+  - SplitPayment table (vendor splits, platform fees)
+  - ExchangeRate table (historical rates, 18.8 precision)
+  - AuditLog table (NDPR compliance)
+- [x] **CRITICAL FIX:** Corrected `prisma.config.ts` provider from PostgreSQL → MySQL
+  - Was inconsistent with `schema.prisma` (MySQL) and Docker Compose (MySQL 8.0)
+  - Now aligned across all layers
+- [x] Created comprehensive migrations strategy document ([DATABASE_MIGRATIONS_STRATEGY.md](DATABASE_MIGRATIONS_STRATEGY.md))
+  - Phase-by-phase schema roadmap (Phases 1-5)
+  - Backend integration approach (Alembic for SQLAlchemy)
+  - Migration runbook for dev/prod
+  - Data migration strategy for legacy systems
+- [ ] **TODO Phase 2:** Generate booking tables migration (flights, hotels, cars, tours, visas)
+- [ ] **TODO Phase 3:** Generate user/vendor management migration
+- [ ] **TODO Phase 4:** Backend Alembic setup (currently no formal migrations)
+- [ ] **TODO Phase 4:** Seed data script (`commerce/prisma/seed.ts`)
+
+### 5. **Azure Infrastructure Enhancement**
+- [x] Added **Key Vault secret** `gpt-5-1-enabled=true` to Bicep template
 - [x] Enables GPT-5.1 globally for all AKS pod deployments
 - [x] Deployed via: `az deployment group create --resource-group <rg> --template-file traveease-infrastructure.bicep`
 
-### 5. **Payment Orchestration Services**
+### 6. **Payment Orchestration Services**
 
 #### PaymentGatewayOrchestrator (1,100+ lines)
 - [x] **Geolocation Detection**: MaxMind GeoIP2 integration
