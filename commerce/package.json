@@ -22,7 +22,8 @@
     "typeorm": "typeorm-ts-node-esm",
     "migration:generate": "npm run typeorm -- migration:generate",
     "migration:run": "npm run typeorm -- migration:run",
-    "seed": "ts-node src/database/seed.ts"
+    "seed": "ts-node prisma/seed.ts",
+    "seed:reset": "prisma migrate reset --force && npm run seed"
   },
   "dependencies": {
     "@nestjs/axios": "^3.0.1",
