@@ -1,0 +1,334 @@
+---
+# AlertManager ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+  labels:
+    app: alertmanager
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+      slack_api_url: '${SLACK_WEBHOOK_URL}'
+      pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+    
+    route:
+      receiver: 'default'
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      routes:
+        - match:
+            severity: critical
+          receiver: 'critical'
+          continue: true
+          group_wait: 0s
+          repeat_interval: 5m
+        
+        - match:
+            severity: warning
+          receiver: 'warning'
+          group_wait: 30s
+          repeat_interval: 1h
+        
+        - match:
+            alertname: 'HighErrorRate|HighLatency|PaymentProcessingDelay|BookingConfirmationDelay'
+          receiver: 'sla-team'
+          group_wait: 5s
+          repeat_interval: 10m
+    
+    receivers:
+      - name: 'default'
+        slack_configs:
+          - channel: '#alerts'
+            title: 'Alert: {{ .GroupLabels.alertname }}'
+            text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+      
+      - name: 'critical'
+        slack_configs:
+          - channel: '#critical-alerts'
+            title: '🚨 CRITICAL: {{ .GroupLabels.alertname }}'
+            text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        pagerduty_configs:
+          - service_key: '${PAGERDUTY_SERVICE_KEY}'
+            description: '{{ .GroupLabels.alertname }}'
+      
+      - name: 'warning'
+        slack_configs:
+          - channel: '#warnings'
+            title: '⚠️ Warning: {{ .GroupLabels.alertname }}'
+            text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+      
+      - name: 'sla-team'
+        slack_configs:
+          - channel: '#sla-tracking'
+            title: '📊 SLA Alert: {{ .GroupLabels.alertname }}'
+            text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+        email_configs:
+          - to: 'sla-team@traveease.com'
+            from: 'alerts@traveease.com'
+            smarthost: 'smtp.sendgrid.net:587'
+            auth_username: 'apikey'
+            auth_password: '${SENDGRID_API_KEY}'
+            headers:
+              Subject: 'SLA Violation: {{ .GroupLabels.alertname }}'
+    
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'cluster', 'service']
+      
+      - source_match_re:
+          alertname: 'HighErrorRate|HighLatency'
+        target_match_re:
+          alertname: 'PodCrashLooping'
+        equal: ['namespace', 'pod']
+
+---
+# AlertManager Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: alertmanager
+  namespace: monitoring
+
+---
+# AlertManager Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9093"
+    spec:
+      serviceAccountName: alertmanager
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      
+      containers:
+      - name: alertmanager
+        image: prom/alertmanager:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 9093
+          protocol: TCP
+        
+        args:
+          - "--config.file=/etc/alertmanager/alertmanager.yml"
+          - "--storage.path=/alertmanager"
+          - "--web.external-url=http://alertmanager.monitoring.svc.cluster.local:9093"
+          - "--web.route-prefix=/"
+        
+        env:
+        - name: SLACK_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-secrets
+              key: slack-webhook-url
+        - name: PAGERDUTY_SERVICE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-secrets
+              key: pagerduty-service-key
+        - name: SENDGRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: alertmanager-secrets
+              key: sendgrid-api-key
+        
+        volumeMounts:
+        - name: config
+          mountPath: /etc/alertmanager
+        - name: storage
+          mountPath: /alertmanager
+        
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
+      
+      volumes:
+      - name: config
+        configMap:
+          name: alertmanager-config
+      - name: storage
+        emptyDir:
+          sizeLimit: 2Gi
+
+---
+# AlertManager Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+  labels:
+    app: alertmanager
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 9093
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: alertmanager
+
+---
+# AlertManager Secrets (should be created externally via sealed-secrets or external-secrets)
+# For now, using placeholder - must be updated with real values
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-secrets
+  namespace: monitoring
+type: Opaque
+stringData:
+  slack-webhook-url: "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+  pagerduty-service-key: "YOUR_PAGERDUTY_SERVICE_KEY"
+  sendgrid-api-key: "YOUR_SENDGRID_API_KEY"
+
+---
+# PrometheusRule for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: traveease-slo-alerts
+  namespace: monitoring
+  labels:
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+    - name: traveease.rules
+      interval: 30s
+      rules:
+        # SLA: Payment processing <15 seconds p95
+        - alert: PaymentProcessingDelay
+          expr: histogram_quantile(0.95, rate(payment_processing_duration_seconds_bucket[5m])) > 15
+          for: 5m
+          labels:
+            severity: critical
+            sla_violation: "true"
+          annotations:
+            summary: "Payment Processing Exceeds SLA"
+            description: "Payment p95 latency is {{ $value }}s, exceeding 15s SLA target for {{ $labels.payment_method }}"
+
+        # SLA: Booking confirmation <30 seconds p95
+        - alert: BookingConfirmationDelay
+          expr: histogram_quantile(0.95, rate(booking_confirmation_duration_seconds_bucket[5m])) > 30
+          for: 5m
+          labels:
+            severity: critical
+            sla_violation: "true"
+          annotations:
+            summary: "Booking Confirmation Exceeds SLA"
+            description: "Booking p95 latency is {{ $value }}s, exceeding 30s SLA target for {{ $labels.booking_type }}"
+
+        # SLA: Error rate <0.1% (99.9% uptime)
+        - alert: HighErrorRate
+          expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)) / (sum(rate(http_requests_total[5m])) by (job)) > 0.001
+          for: 5m
+          labels:
+            severity: critical
+            sla_violation: "true"
+          annotations:
+            summary: "High Error Rate - SLA Violation"
+            description: "Error rate for {{ $labels.job }} is {{ $value | humanizePercentage }}, exceeding 0.1% SLA target"
+
+        # SLA: API latency p95 <200ms
+        - alert: HighLatency
+          expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.2
+          for: 5m
+          labels:
+            severity: warning
+            sla_violation: "true"
+          annotations:
+            summary: "High API Latency - Approaching SLA Limit"
+            description: "API p95 latency for {{ $labels.job }} is {{ $value }}s, approaching 200ms SLA target"
+
+        # Pod restarts indicating instability
+        - alert: PodCrashLooping
+          expr: rate(kube_pod_container_status_restarts_total[30m]) > 0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Pod is Crash Looping"
+            description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting at rate {{ $value }}/min"
+
+        # Database connection pool exhaustion
+        - alert: DBConnectionPoolExhausted
+          expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Database Connection Pool Nearly Full"
+            description: "Database connection usage is {{ $value | humanizePercentage }}"
+
+        # Service down
+        - alert: ServiceDown
+          expr: up{job=~"backend-api|commerce-service|frontend"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Service is Down"
+            description: "{{ $labels.job }} at {{ $labels.instance }} is unreachable"
+
+---
+# Namespace for monitoring
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    name: monitoring

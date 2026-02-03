@@ -1,0 +1,371 @@
+---
+# Prometheus ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        monitor: 'traveease-prod'
+        environment: 'production'
+        cluster: 'aks-primary'
+    
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager:9093']
+    
+    rule_files:
+      - '/etc/prometheus/rules/alert_rules.yml'
+      - '/etc/prometheus/rules/recording_rules.yml'
+    
+    scrape_configs:
+      # Prometheus self
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+      
+      # Backend API
+      - job_name: 'backend-api'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [traveease-prod]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: 'backend-api'
+          - source_labels: [__meta_kubernetes_pod_ip]
+            target_label: __address__
+            replacement: '${1}:3000'
+      
+      # Commerce Service
+      - job_name: 'commerce-service'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [traveease-prod]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: 'commerce-service'
+          - source_labels: [__meta_kubernetes_pod_ip]
+            target_label: __address__
+            replacement: '${1}:3001'
+      
+      # Frontend
+      - job_name: 'frontend'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [traveease-prod]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: 'frontend'
+          - source_labels: [__meta_kubernetes_pod_ip]
+            target_label: __address__
+            replacement: '${1}:3000'
+      
+      # MySQL
+      - job_name: 'mysql'
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [traveease-prod]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            action: keep
+            regex: 'mysql'
+          - source_labels: [__meta_kubernetes_pod_ip]
+            target_label: __address__
+            replacement: '${1}:9104'
+      
+      # Kubernetes nodes
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        scheme: https
+        tls_config:
+          ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      
+      # Kubernetes pods
+      - job_name: 'kubernetes-pods'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: 'true'
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+          - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            regex: ([^:]+)(?::\d+)?;(\d+)
+            replacement: $1:$2
+            target_label: __address__
+
+---
+# Alert Rules ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alert-rules
+  namespace: monitoring
+  labels:
+    app: prometheus
+data:
+  alert_rules.yml: |
+    groups:
+      - name: traveease_alerts
+        interval: 30s
+        rules:
+          - alert: HighErrorRate
+            expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)) / (sum(rate(http_requests_total[5m])) by (job)) > 0.01
+            for: 5m
+            annotations:
+              summary: "High Error Rate"
+              description: "Error rate for {{ $labels.job }} exceeds 1%"
+              severity: "critical"
+          
+          - alert: HighLatency
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+            for: 5m
+            annotations:
+              summary: "High API Latency"
+              description: "p95 latency exceeds 500ms for {{ $labels.job }}"
+              severity: "warning"
+          
+          - alert: PodCrashLooping
+            expr: rate(kube_pod_container_status_restarts_total[30m]) > 0
+            for: 5m
+            annotations:
+              summary: "Pod is Crash Looping"
+              description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is restarting"
+              severity: "warning"
+          
+          - alert: PaymentProcessingDelay
+            expr: histogram_quantile(0.95, rate(payment_processing_duration_seconds_bucket[5m])) > 15
+            for: 5m
+            annotations:
+              summary: "Payment Processing Exceeds SLA"
+              description: "Payment p95 latency exceeds 15 seconds"
+              severity: "critical"
+          
+          - alert: BookingConfirmationDelay
+            expr: histogram_quantile(0.95, rate(booking_confirmation_duration_seconds_bucket[5m])) > 30
+            for: 5m
+            annotations:
+              summary: "Booking Confirmation Exceeds SLA"
+              description: "Booking p95 latency exceeds 30 seconds"
+              severity: "critical"
+
+  recording_rules.yml: |
+    groups:
+      - name: traveease_recording_rules
+        interval: 30s
+        rules:
+          - record: job:http_requests:rate5m
+            expr: sum(rate(http_requests_total[5m])) by (job)
+          
+          - record: job:http_requests_5xx:rate5m
+            expr: sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)
+          
+          - record: job:http_error_rate:rate5m
+            expr: (sum(rate(http_requests_total{status=~"5.."}[5m])) by (job)) / (sum(rate(http_requests_total[5m])) by (job))
+          
+          - record: job:http_latency:p95_5m
+            expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) by (job)
+          
+          - record: job:http_latency:p99_5m
+            expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) by (job)
+          
+          - record: payment:latency:p95_5m
+            expr: histogram_quantile(0.95, rate(payment_processing_duration_seconds_bucket[5m])) by (payment_method)
+          
+          - record: booking:latency:p95_5m
+            expr: histogram_quantile(0.95, rate(booking_confirmation_duration_seconds_bucket[5m])) by (booking_type)
+
+---
+# Prometheus Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+
+---
+# Prometheus ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["ingresses"]
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+
+---
+# Prometheus ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+  labels:
+    app: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: monitoring
+
+---
+# Prometheus Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        fsGroup: 65534
+      
+      containers:
+      - name: prometheus
+        image: prom/prometheus:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 9090
+          protocol: TCP
+        
+        args:
+          - "--config.file=/etc/prometheus/prometheus.yml"
+          - "--storage.tsdb.path=/prometheus"
+          - "--storage.tsdb.retention.time=15d"
+          - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+          - "--web.console.templates=/usr/share/prometheus/consoles"
+          - "--web.enable-lifecycle"
+        
+        volumeMounts:
+        - name: config
+          mountPath: /etc/prometheus
+        - name: rules
+          mountPath: /etc/prometheus/rules
+        - name: storage
+          mountPath: /prometheus
+        
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        
+        livenessProbe:
+          httpGet:
+            path: /-/healthy
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /-/ready
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 3
+      
+      volumes:
+      - name: config
+        configMap:
+          name: prometheus-config
+      - name: rules
+        configMap:
+          name: prometheus-alert-rules
+      - name: storage
+        emptyDir:
+          sizeLimit: 50Gi
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+  labels:
+    app: prometheus
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 9090
+    targetPort: http
+    protocol: TCP
+  selector:
+    app: prometheus
+
+---
+# Prometheus PersistentVolumeClaim (for state persistence)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-storage
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: azure-disk
