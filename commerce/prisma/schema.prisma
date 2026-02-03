@@ -23,6 +23,12 @@ model Transaction {
   type              String
   status            String
   splitPayments     SplitPayment[]
+  flightBookings    FlightBooking[]
+  hotelBookings     HotelBooking[]
+  carRentals        CarRental[]
+  tourBookings      TourBooking[]
+  visaApplications  VisaApplication[]
+  insurancePolicies InsurancePolicy[]
 }
 
 model SplitPayment {
@@ -50,4 +56,373 @@ model AuditLog {
   action        String
   maskedData    String
   createdAt     DateTime @default(now())
+}
+
+// =====================================================================
+// PHASE 2: BOOKING SCHEMA
+// =====================================================================
+
+model FlightOffer {
+  id                        String   @id @default(uuid())
+  externalProviderId        String   @db.VarChar(255)
+  externalProviderName      String   @db.VarChar(100)
+  departureCity             String   @db.Char(3)
+  arrivalCity               String   @db.Char(3)
+  departureTime             DateTime
+  arrivalTime               DateTime
+  airline                   String   @db.VarChar(100)
+  flightNumber              String   @db.VarChar(10)
+  aircraft                  String?  @db.VarChar(50)
+  cabin                     String   @default("ECONOMY")
+  baseAmountMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  totalPriceMinor           BigInt
+  validityDurationMinutes   Int      @default(1200)
+  expiresAt                 DateTime
+  passengerCount            Int      @default(1)
+  stops                     Int      @default(0)
+  duration                  String?  @db.VarChar(20)
+  isRefundable              Boolean  @default(true)
+  isCancellable             Boolean  @default(true)
+  ancillariesAvailable      String?  @db.Json
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  flightBookings            FlightBooking[]
+
+  @@index([departureCity, arrivalCity])
+  @@index([expiresAt])
+  @@index([externalProviderId])
+}
+
+model FlightBooking {
+  id                    String   @id @default(uuid())
+  transactionId         String
+  flightOfferId         String
+  externalPNR           String?  @db.VarChar(6)
+  externalBookingId     String?  @db.VarChar(255)
+  status                String   @default("OFFER_VALID")
+  passengerInfoHash     String?  @db.VarChar(255)
+  adultCount            Int      @default(1)
+  childCount            Int      @default(0)
+  infantCount           Int      @default(0)
+  basePriceMinor        BigInt
+  ancillariesMinor      BigInt   @default(0)
+  finalPriceMinor       BigInt
+  currencyCode          String   @db.Char(3)
+  paymentGateway        String?  @db.VarChar(50)
+  holdExpiresAt         DateTime?
+  priceLockedAt         DateTime?
+  issuedAt              DateTime?
+  cancelledAt           DateTime?
+  refundInitiatedAt     DateTime?
+  vendorId              String?  @db.Char(36)
+  ticketNumbers         String?  @db.Json
+  baggageAllowance      String?  @db.Json
+  seatSelections        String?  @db.Json
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  flightOffer           FlightOffer @relation(fields: [flightOfferId], references: [id])
+  transaction           Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([status])
+  @@index([externalPNR])
+  @@index([transactionId])
+  @@unique([externalBookingId, externalPNR])
+}
+
+model HotelOffer {
+  id                        String   @id @default(uuid())
+  externalProviderId        String   @db.VarChar(255)
+  hotelName                 String   @db.VarChar(255)
+  chainCode                 String?  @db.VarChar(10)
+  cityCode                  String   @db.VarChar(3)
+  latitude                  Decimal? @db.Decimal(10, 8)
+  longitude                 Decimal? @db.Decimal(11, 8)
+  address                   String?  @db.VarChar(500)
+  checkInDate               DateTime
+  checkOutDate              DateTime
+  nightCount                Int
+  roomType                  String?  @db.VarChar(100)
+  boardType                 String   @default("ROOM_ONLY")
+  occupancy                 Int
+  pricePerNightMinor        BigInt
+  totalPriceMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  cancellationDeadline      DateTime?
+  isRefundable              Boolean  @default(true)
+  stars                     Int?
+  amenities                 String?  @db.Json
+  images                    String?  @db.Json
+  validityDurationHours     Int      @default(24)
+  expiresAt                 DateTime
+  createdAt                 DateTime @default(now())
+  hotelBookings             HotelBooking[]
+
+  @@index([cityCode])
+  @@index([checkInDate, checkOutDate])
+  @@index([expiresAt])
+  @@index([externalProviderId])
+}
+
+model HotelBooking {
+  id                        String   @id @default(uuid())
+  transactionId             String
+  hotelOfferId              String
+  externalConfirmationId    String?  @db.VarChar(255)
+  status                    String   @default("OFFER_VALID")
+  guestName                 String   @db.VarChar(255)
+  guestEmail                String   @db.VarChar(255)
+  guestPhone                String?  @db.VarChar(20)
+  roomCount                 Int      @default(1)
+  guestCount                Int
+  totalPriceMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  paymentGateway            String?  @db.VarChar(50)
+  specialRequests           String?  @db.Text
+  reservedAt                DateTime?
+  confirmedAt               DateTime?
+  cancelledAt               DateTime?
+  refundInitiatedAt         DateTime?
+  vendorId                  String?  @db.Char(36)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  hotelOffer                HotelOffer @relation(fields: [hotelOfferId], references: [id])
+  transaction               Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([status])
+  @@index([externalConfirmationId])
+  @@index([transactionId])
+  @@unique([externalConfirmationId])
+}
+
+model CarOffer {
+  id                        String   @id @default(uuid())
+  externalProviderId        String   @db.VarChar(255)
+  vendorName                String   @db.VarChar(100)
+  vendorCode                String?  @db.VarChar(10)
+  pickupLocationCode        String   @db.VarChar(5)
+  pickupLatitude            Decimal? @db.Decimal(10, 8)
+  pickupLongitude           Decimal? @db.Decimal(11, 8)
+  dropoffLocationCode       String   @db.VarChar(5)
+  dropoffLatitude           Decimal? @db.Decimal(10, 8)
+  dropoffLongitude          Decimal? @db.Decimal(11, 8)
+  pickupDateTime            DateTime
+  dropoffDateTime           DateTime
+  rentalDays                Int
+  carCategory               String?  @db.VarChar(100)
+  carModel                  String?  @db.VarChar(255)
+  transmission              String   @default("AUTOMATIC")
+  airConditioning           Boolean  @default(true)
+  seats                     Int      @default(5)
+  doors                     Int      @default(4)
+  luggage                   Int      @default(2)
+  dailyRateMinor            BigInt
+  totalPriceMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  insuranceIncluded         Boolean  @default(true)
+  mileagePolicy             String   @default("UNLIMITED")
+  isRefundable              Boolean  @default(true)
+  validityDurationHours     Int      @default(48)
+  expiresAt                 DateTime
+  createdAt                 DateTime @default(now())
+  carRentals                CarRental[]
+
+  @@index([pickupLocationCode, dropoffLocationCode])
+  @@index([pickupDateTime, dropoffDateTime])
+  @@index([expiresAt])
+  @@index([externalProviderId])
+}
+
+model CarRental {
+  id                        String   @id @default(uuid())
+  transactionId             String
+  carOfferId                String
+  externalConfirmationId    String?  @db.VarChar(255)
+  status                    String   @default("OFFER_VALID")
+  driverName                String   @db.VarChar(255)
+  driverEmail               String?  @db.VarChar(255)
+  driverPhone               String?  @db.VarChar(20)
+  driverLicenseCountry      String?  @db.Char(2)
+  additionalDrivers         String?  @db.Json
+  totalPriceMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  paymentGateway            String?  @db.VarChar(50)
+  pickupNotes               String?  @db.Text
+  returnNotes               String?  @db.Text
+  damageReportUrl           String?  @db.VarChar(500)
+  reservedAt                DateTime?
+  pickedUpAt                DateTime?
+  returnedAt                DateTime?
+  cancelledAt               DateTime?
+  refundInitiatedAt         DateTime?
+  vendorId                  String?  @db.Char(36)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  carOffer                  CarOffer @relation(fields: [carOfferId], references: [id])
+  transaction               Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([status])
+  @@index([externalConfirmationId])
+  @@index([transactionId])
+}
+
+model TourOffer {
+  id                        String   @id @default(uuid())
+  externalProviderId        String   @db.VarChar(255)
+  operatorName              String   @db.VarChar(255)
+  title                     String   @db.VarChar(500)
+  description               String?  @db.LongText
+  cityCode                  String   @db.VarChar(3)
+  categoryCode              String?  @db.VarChar(50)
+  startDateTime             DateTime
+  durationMinutes           Int
+  meetingPoint              String?  @db.VarChar(500)
+  meetingLatitude           Decimal? @db.Decimal(10, 8)
+  meetingLongitude          Decimal? @db.Decimal(11, 8)
+  maxParticipants           Int      @default(50)
+  pricePerPersonMinor       BigInt
+  totalPriceMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  languageCode              String   @default("en") @db.Char(2)
+  includes                  String?  @db.Json
+  excludes                  String?  @db.Json
+  guestRequirements         String?  @db.VarChar(500)
+  minAge                    Int?
+  maxAge                    Int?
+  physicalRating            String   @default("EASY")
+  rating                    Decimal? @db.Decimal(3, 2)
+  reviewCount               Int      @default(0)
+  isRefundable              Boolean  @default(true)
+  cancellationDeadlineHours Int      @default(24)
+  validityDurationHours     Int      @default(72)
+  expiresAt                 DateTime
+  createdAt                 DateTime @default(now())
+  tourBookings              TourBooking[]
+
+  @@index([cityCode])
+  @@index([startDateTime])
+  @@index([expiresAt])
+  @@index([externalProviderId])
+}
+
+model TourBooking {
+  id                        String   @id @default(uuid())
+  transactionId             String
+  tourOfferId               String
+  externalConfirmationId    String?  @db.VarChar(255)
+  status                    String   @default("OFFER_VALID")
+  bookerName                String   @db.VarChar(255)
+  bookerEmail               String?  @db.VarChar(255)
+  bookerPhone               String?  @db.VarChar(20)
+  participantCount          Int
+  participantList           String?  @db.Json
+  totalPriceMinor           BigInt
+  currencyCode              String   @db.Char(3)
+  paymentGateway            String?  @db.VarChar(50)
+  specialRequests           String?  @db.Text
+  confirmationSentAt        DateTime?
+  completedAt               DateTime?
+  cancelledAt               DateTime?
+  refundInitiatedAt         DateTime?
+  vendorId                  String?  @db.Char(36)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  tourOffer                 TourOffer @relation(fields: [tourOfferId], references: [id])
+  transaction               Transaction @relation(fields: [transactionId], references: [id])
+
+  @@index([status])
+  @@index([externalConfirmationId])
+  @@index([transactionId])
+}
+
+model VisaApplication {
+  id                        String   @id @default(uuid())
+  transactionId             String?
+  externalProviderId        String?  @db.VarChar(255)
+  destinationCountry        String   @db.Char(2)
+  citizenship               String   @db.Char(2)
+  visaType                  String?  @db.VarChar(100)
+  processingTime            String?  @db.VarChar(100)
+  requiredDocuments         String?  @db.Json
+  priceMinor                BigInt
+  currencyCode              String   @db.Char(3)
+  status                    String   @default("INFORMATION_REQUESTED")
+  applicantName             String   @db.VarChar(255)
+  passportNumber            String?  @db.VarChar(20)
+  passportExpiryDate        DateTime?
+  documentsUploadedAt       DateTime?
+  submittedAt               DateTime?
+  approvedAt                DateTime?
+  rejectedAt                DateTime?
+  rejectionReason           String?  @db.Text
+  expiryDate                DateTime?
+  refundInitiatedAt         DateTime?
+  vendorId                  String?  @db.Char(36)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  transaction               Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([status])
+  @@index([destinationCountry])
+  @@index([citizenship])
+}
+
+model InsurancePolicy {
+  id                        String   @id @default(uuid())
+  transactionId             String?
+  externalPolicyId          String?  @db.VarChar(255)
+  insuranceProvider         String?  @db.VarChar(100)
+  policyType                String   @default("TRAVEL")
+  coverage                  String?  @db.VarChar(500)
+  maxCoverage               BigInt?
+  maxCoverageCurrency       String?  @db.Char(3)
+  premiumMinor              BigInt
+  premiumCurrency           String   @db.Char(3)
+  tripStartDate             DateTime?
+  tripEndDate               DateTime?
+  numberOfTravelers         Int      @default(1)
+  status                    String   @default("PENDING_PAYMENT")
+  activatedAt               DateTime?
+  expiresAt                 DateTime?
+  claimFiledAt              DateTime?
+  claimResolvedAt           DateTime?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  transaction               Transaction? @relation(fields: [transactionId], references: [id])
+
+  @@index([status])
+  @@index([insuranceProvider])
+}
+
+model BookingItinerary {
+  id                        String   @id @default(uuid())
+  userId                    String   @db.Char(36)
+  tripName                  String?  @db.VarChar(500)
+  startDate                 DateTime
+  endDate                   DateTime
+  primaryDestinationCountry String?  @db.Char(2)
+  status                    String   @default("DRAFT")
+  totalItineraryCostMinor   BigInt   @default(0)
+  currencyCode              String?  @db.Char(3)
+  flightBookingId           String?  @db.Char(36)
+  hotelBookingId            String?  @db.Char(36)
+  carRentalId               String?  @db.Char(36)
+  tourBookingIds            String?  @db.Json
+  visaApplicationIds        String?  @db.Json
+  insurancePolicyIds        String?  @db.Json
+  lastPriceCheck            DateTime?
+  priceDropDetected         Boolean  @default(false)
+  priceDropPercentage       Decimal? @db.Decimal(5, 2)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([startDate, endDate])
 }
