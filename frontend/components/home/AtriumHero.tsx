@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocale } from "next-intl";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -44,10 +45,18 @@ export function AtriumHero() {
   const [activeTab, setActiveTab] = useState("trips");
   const [thoughtIndex, setThoughtIndex] = useState(0);
   const locale = useLocale();
+  const router = useRouter();
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Wire this into the AI Concierge + unified search endpoint.
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    const search = new URLSearchParams();
+    search.set("q", trimmed);
+    search.set("mode", activeTab);
+
+    router.push(`/${locale}/search?${search.toString()}`);
   };
 
   const copyByLocale: Record<string, { title: string; subtitle: string; inputLabel: string; inputPlaceholder: string; cta: string; disclaimer: string; docs: string }> = {
@@ -193,8 +202,11 @@ export function AtriumHero() {
                       placeholder={inputPlaceholder}
                       value={query}
                       onChange={(e) => {
-                        setQuery(e.target.value);
-                        setThoughtIndex((prev) => (prev + 1) % AGENT_THOUGHTS.length);
+                        const next = e.target.value;
+                        setQuery(next);
+                        if (next.trim()) {
+                          setThoughtIndex((prev) => (prev + 1) % AGENT_THOUGHTS.length);
+                        }
                       }}
                     />
                   </div>

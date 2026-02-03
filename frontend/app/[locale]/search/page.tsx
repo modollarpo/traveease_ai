@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { formatMultiCurrency } from '@/lib/money';
@@ -85,6 +86,9 @@ const experiences = [
 export default function SearchResultsPage() {
   const baseCurrency: 'USD' = 'USD';
 
+  const searchParams = useSearchParams();
+  const q = searchParams.get('q') ?? '';
+
   return (
     <div className="app-container py-10 space-y-10">
       <header className="space-y-3">
@@ -98,6 +102,14 @@ export default function SearchResultsPage() {
           Instead of a long list, you get a trip canvas: flights, cars, and
           local experiences scored together by savings, reliability, and vibe.
         </p>
+        {q && (
+          <p className="text-xs text-ghost-white/70">
+            Interpreting your request:&nbsp;
+            <span className="rounded-full bg-black/40 px-2 py-0.5">
+              “{q}”
+            </span>
+          </p>
+        )}
       </header>
 
       <motion.section

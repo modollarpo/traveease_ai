@@ -1,12 +1,37 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { puffyTap, fadeInUp, staggerContainer } from '@/lib/motion';
+import { createMarketplaceCheckout } from '@/lib/api';
 
 export default function VaultCheckoutPage() {
+  const [submitting, setSubmitting] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+
+  const handleAuthorise = async () => {
+    try {
+      setSubmitting(true);
+      setStatus(null);
+      const result = await createMarketplaceCheckout({
+        userId: 'demo-user',
+        currency: 'USD',
+        items: [
+          { vendorId: 'airline-1', label: 'Flight', amountMinor: 100000, currency: 'USD' },
+          { vendorId: 'hotel-1', label: 'Hotel', amountMinor: 30000, currency: 'USD' },
+          { vendorId: 'guide-1', label: 'Local Guide', amountMinor: 5000, currency: 'USD' },
+          { vendorId: 'traveease', label: 'Platform Fee', amountMinor: 15000, currency: 'USD' },
+        ],
+      });
+      setStatus(`Gateway: ${result.gateway} · Intent: ${result.paymentIntentId}`);
+    } catch (err: any) {
+      setStatus(err?.message ?? 'Checkout failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
   return (
     <div className="app-container py-10 pb-20 space-y-10">
       <header className="space-y-3">
@@ -89,11 +114,18 @@ export default function VaultCheckoutPage() {
                     variant="primary"
                     size="lg"
                     className="gummy-button bg-neo-mint text-traveease-blue hover:bg-neo-mint/90"
+                    onClick={handleAuthorise}
+                    disabled={submitting}
                   >
-                    Authorise & secure all bookings
+                    {submitting ? 'Authorising…' : 'Authorise & secure all bookings'}
                   </Button>
                 </motion.div>
               </div>
+              {status && (
+                <p className="pt-2 text-[11px] text-ghost-white/70">
+                  {status}
+                </p>
+              )}
             </CardContent>
           </Card>
         </motion.div>

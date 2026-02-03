@@ -8,6 +8,30 @@ import { puffyTap } from "@/lib/motion";
 export function ConciergeAgentWidget() {
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [reply, setReply] = useState<any | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!message.trim()) return;
+    try {
+      setLoading(true);
+      setReply(null);
+      const res = await fetch("/api/concierge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Agent request failed");
+      }
+      setReply(data.reply);
+    } catch (err: any) {
+      setReply(err?.message ?? "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed bottom-5 right-5 z-40">
@@ -58,11 +82,67 @@ export function ConciergeAgentWidget() {
                   size="sm"
                   variant="primary"
                   className="gummy-button bg-neo-mint text-traveease-blue hover:bg-neo-mint/90 px-3 text-[11px]"
+                  onClick={sendMessage}
+                  disabled={loading}
                 >
-                  Send
+                  {loading ? "Thinking…" : "Send"}
                 </Button>
               </motion.div>
             </div>
+            {reply && (
+              <div className="mt-2 space-y-2 rounded-2xl bg-black/40 p-2 text-[10px] text-slate-200">
+                {reply.itinerary && (
+                  <div>
+                    <p className="mb-1 font-semibold">Proposed itinerary</p>
+                    <p className="text-[10px] text-slate-300">
+                      Status: {reply.itinerary.status ?? "pending"}
+                    </p>
+                  </div>
+                )}
+                {reply.prices && (
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(reply.prices).map(([ccy, amount]) => (
+                      <span
+                        key={ccy}
+                        className="rounded-full bg-slate-800 px-2 py-1 text-[9px]"
+                      >
+                        {ccy}: {amount}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {reply.visa && (
+                  <div>
+                    <p className="mb-1 font-semibold">Visa overview</p>
+                    <p className="text-[10px] text-slate-300">
+                      {reply.visa.eligible
+                        ? "Eligible for e-visa or standard processing."
+                        : "Additional visa checks may be required."}
+                    </p>
+                    {reply.visa.processing_time_days && (
+                      <p className="text-[10px] text-slate-400">
+                        Est. processing: {reply.visa.processing_time_days} days
+                      </p>
+                    )}
+                    {reply.visa.visa_fee && reply.visa.currency && (
+                      <p className="text-[10px] text-slate-400">
+                        Approx. visa fee: {reply.visa.visa_fee} {reply.visa.currency}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {reply.approval_required && (
+                  <p className="text-[9px] text-heritage-clay">
+                    Human approval required before we confirm any changes.
+                  </p>
+                )}
+                {!reply.itinerary && !reply.prices && (
+                  <pre className="whitespace-pre-wrap text-[9px] text-slate-200">
+                    {JSON.stringify(reply, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
